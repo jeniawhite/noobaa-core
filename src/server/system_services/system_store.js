@@ -430,10 +430,12 @@ class SystemStore extends EventEmitter {
     [util.inspect.custom]() { return 'SystemStore'; }
 
     initial_load() {
+        dbg.log0('JENIA initial_load called');
         mongo_client.instance().on('reconnect', () => this.load());
         P.delay(100)
             .then(() => {
                 if (mongo_client.instance().is_connected()) {
+                    dbg.log0('JENIA initial_load running load');
                     return this.load();
                 }
             })
@@ -451,6 +453,7 @@ class SystemStore extends EventEmitter {
             load_time = this.data.time;
         }
         let since_load = Date.now() - load_time;
+        dbg.log0('JENIA refresh called', load_time, since_load);
         if (since_load < this.START_REFRESH_THRESHOLD) {
             return this.data;
         } else if (since_load < this.FORCE_REFRESH_THRESHOLD) {
@@ -466,23 +469,23 @@ class SystemStore extends EventEmitter {
         // because it might not see the latest changes if we don't reload right after make_changes.
         return this._load_serial.surround(async () => {
             try {
-                dbg.log3('SystemStore: loading ...');
+                dbg.log0('SystemStore: loading ...');
                 let new_data = new SystemStoreData();
                 let millistamp = time_utils.millistamp();
                 await this._register_for_changes();
                 await this._read_new_data_from_db(new_data);
                 const secret = await os_utils.read_server_secret();
                 this._server_secret = secret;
-                dbg.log1('SystemStore: fetch took', time_utils.millitook(millistamp));
-                dbg.log1('SystemStore: fetch size', size_utils.human_size(JSON.stringify(new_data).length));
-                dbg.log1('SystemStore: fetch data', util.inspect(new_data, {
+                dbg.log0('SystemStore: fetch took', time_utils.millitook(millistamp));
+                dbg.log0('SystemStore: fetch size', size_utils.human_size(JSON.stringify(new_data).length));
+                dbg.log0('SystemStore: fetch data', util.inspect(new_data, {
                     depth: 4
                 }));
                 this.old_db_data = this.old_db_data ? this._update_data_from_new(this.old_db_data, new_data) : new_data;
                 this.data = _.cloneDeep(this.old_db_data);
                 millistamp = time_utils.millistamp();
                 this.data.rebuild();
-                dbg.log1('SystemStore: rebuild took', time_utils.millitook(millistamp));
+                dbg.log0('SystemStore: rebuild took', time_utils.millitook(millistamp));
                 this.emit('load');
                 this.is_finished_initial_load = true;
                 return this.data;
@@ -499,6 +502,9 @@ class SystemStore extends EventEmitter {
             const res = _.unionBy(new_data[col.name], old_data, doc => doc._id.toString());
             new_data[col.name] = res.filter(doc => !doc.deleted);
         });
+        dbg.log0('JENIA _update_data_from_new merged data', util.inspect(new_data, {
+            depth: 4
+        }));
         return new_data;
     }
 
@@ -509,9 +515,11 @@ class SystemStore extends EventEmitter {
             return;
         }
         if (!this._registered_for_reconnect) {
+            dbg.log0('JENIA _register_for_changes register for reconnect');
             server_rpc.rpc.on('reconnect', conn => this._on_reconnect(conn));
             this._registered_for_reconnect = true;
         }
+        dbg.log0('JENIA _register_for_changes register_to_cluster called');
         return server_rpc.client.redirector.register_to_cluster();
     }
 
@@ -541,6 +549,7 @@ class SystemStore extends EventEmitter {
     }
 
     _read_new_data_from_db(target) {
+        dbg.log0('JENIA _read_new_data_from_db called with time', this.last_update_time);
         const now = Date.now();
         let newly_updated_query = {
             last_update: {
@@ -558,6 +567,7 @@ class SystemStore extends EventEmitter {
                     for (const item of res) {
                         this._check_schema(col, item, 'warn');
                     }
+                    dbg.log0('JENIA _read_new_data_from_db updated', col.name);
                     target[col.name] = res;
                 })
             ))

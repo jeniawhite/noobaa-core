@@ -1151,6 +1151,10 @@ async function _perform_partial_cycle() {
     const system = system_store.data.systems[0];
     const support_account = _.find(system_store.data.accounts, account => account.is_support);
 
+    if (!support_account) {
+        dbg.log0('JENIA _perform_partial_cycle BUG data', support_account, system_store.data);
+    }
+
     await server_rpc.client.stats.get_partial_stats({}, {
         auth_token: auth_server.make_auth_token({
             system_id: system._id,

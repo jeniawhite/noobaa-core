@@ -11,6 +11,7 @@ const cluster_conn_set = new RpcConnSet('redirector cluster_conn_set');
 const alerts_conn_set = new RpcConnSet('redirector alerts_conn_set');
 
 function register_to_cluster(req) {
+    dbg.log0('JENIA register_to_cluster called with', req.connection.connid);
     cluster_conn_set.add(req.connection);
 }
 
