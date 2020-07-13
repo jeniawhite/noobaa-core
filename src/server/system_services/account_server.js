@@ -46,6 +46,7 @@ const check_connection_timeout = 15 * 1000;
  *
  */
 async function create_account(req) {
+    dbg.log0('create_account called', req.rpc_params);
     const account = {
         _id: (
             req.rpc_params.new_system_parameters ?
@@ -86,6 +87,7 @@ async function create_account(req) {
     if (req.rpc_params.s3_access) {
         if (req.rpc_params.new_system_parameters) {
             account.default_pool = system_store.parse_system_store_id(req.rpc_params.new_system_parameters.default_pool);
+            dbg.log0('create_account new_system_parameters account.default_pool', account.default_pool, req.rpc_params.new_system_parameters.default_pool);
 
             const { full_permission, permission_list } = req.rpc_params.new_system_parameters.allowed_buckets;
             if (full_permission) {
@@ -108,6 +110,8 @@ async function create_account(req) {
             account.default_pool = req.rpc_params.default_pool ?
                 req.system.pools_by_name[req.rpc_params.default_pool]._id :
                 pool_server.get_internal_mongo_pool(req.system)._id; //Internal
+
+            dbg.log0('create_account else account.default_pool', account.default_pool);
 
             if (req.rpc_params.allowed_buckets) {
                 const { full_permission, permission_list } = req.rpc_params.allowed_buckets;
@@ -155,6 +159,7 @@ async function create_account(req) {
         });
     }
 
+    dbg.log0('create_account make_changes', account);
     await system_store.make_changes({
         insert: {
             accounts: [account],
@@ -193,6 +198,7 @@ function create_external_user_account(req) {
         cloudResource[0] ||
         hostPools[0] ||
         internalStorage[0];
+    dbg.log0('create_external_user_account default_pool', default_pool);
 
     Object.assign(req.rpc_params, {
         is_external: true,
@@ -1180,6 +1186,7 @@ function get_account_info(account, include_connection_cache) {
         ...account.preferences
     };
 
+    dbg.log0('ACCOUNT INFO', info);
     return info;
 }
 

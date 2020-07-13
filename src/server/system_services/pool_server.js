@@ -1115,6 +1115,7 @@ function get_internal_mongo_pool(system) {
 }
 
 async function get_optimal_non_mongo_pool_id() {
+    dbg.log0('get_optimal_non_mongo_pool_id called');
     for (const pool of system_store.data.pools) {
         // skip mongo pools.
         if (_is_mongo_pool(pool)) {
@@ -1124,15 +1125,18 @@ async function get_optimal_non_mongo_pool_id() {
         const aggr = await nodes_client.instance().aggregate_nodes_by_pool([pool.name], pool.system._id);
         const { mode = '' } = get_pool_info(pool, aggr);
         if (mode === 'OPTIMAL') {
+            dbg.log0('get_optimal_non_mongo_pool_id found optimal', pool);
             return pool._id;
         }
     }
 }
 
 async function update_account_default_resource() {
+    dbg.log0('update_account_default_resource called');
     for (;;) {
         try {
             const optimal_pool_id = await get_optimal_non_mongo_pool_id();
+            dbg.log0('update_account_default_resource called optimal_pool_id', optimal_pool_id);
 
             if (optimal_pool_id) {
                 const updates = system_store.data.accounts
@@ -1149,6 +1153,7 @@ async function update_account_default_resource() {
                     }));
 
                 if (updates.length > 0) {
+                    dbg.log0('update_account_default_resource make_changes', updates, optimal_pool_id);
                     await system_store.make_changes({
                         update: { accounts: updates }
                     });
@@ -1162,6 +1167,7 @@ async function update_account_default_resource() {
             _.noop();
         }
 
+        dbg.log0('update_account_default_resource delay unblocking');
         await promise_utils.delay_unblocking(5000);
     }
 }

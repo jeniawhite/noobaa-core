@@ -625,12 +625,12 @@ class SystemStore extends EventEmitter {
             } catch (err) {
                 if (retries === max_retries) {
                     dbg.error(`make_changes_with_retries failed. aborting after ${max_retries} retries. changes=`,
-                        util.inspect(changes, { depth: 5 }),
+                        util.inspect(changes, { depth: 6 }),
                         'error=', err);
                     throw err;
                 }
                 dbg.warn(`make_changes failed. will retry in ${delay / 1000} seconds. changes=`,
-                    util.inspect(changes, { depth: 5 }),
+                    util.inspect(changes, { depth: 6 }),
                     'error=', err);
                 retries += 1;
                 await P.delay(delay);
@@ -693,7 +693,7 @@ class SystemStore extends EventEmitter {
         const last_update = now.getTime();
         let any_news = false;
         dbg.log0('SystemStore.make_changes:', util.inspect(changes, {
-            depth: 5
+            depth: 6
         }));
 
         const get_collection = name => {

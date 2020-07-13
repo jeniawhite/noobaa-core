@@ -5,6 +5,7 @@
 const _ = require('lodash');
 const AWS = require('aws-sdk');
 const net = require('net');
+const util = require('util');
 const fs = require('fs');
 const GoogleStorage = require('../../util/google_storage_wrap');
 
@@ -80,6 +81,8 @@ function new_bucket_defaults(name, system_id, tiering_policy_id, owner_account_i
  */
 async function create_bucket(req) {
 
+    dbg.log0('create_bucket called:', util.inspect(req.rpc_params, true, null, true));
+
     validate_bucket_creation(req);
     await validate_pool_constraints();
 
@@ -98,6 +101,7 @@ async function create_bucket(req) {
         // we create dedicated tier and tiering policy for the new bucket
         // that uses the default_pool of that account
         const default_pool = req.account.default_pool;
+        dbg.log0('create_bucket default_pool:', req.account, req.account.default_pool);
         const chunk_config = chunk_config_utils.resolve_chunk_config(
             req.rpc_params.chunk_coder_config, req.account, req.system);
         if (!chunk_config._id) {
@@ -205,8 +209,10 @@ async function create_bucket(req) {
 }
 
 async function validate_pool_constraints() {
+    dbg.log0('validate_pool_constraints called:', config.ALLOW_BUCKET_CREATE_ON_INTERNAL, optimal_pool_existed);
     if (config.ALLOW_BUCKET_CREATE_ON_INTERNAL !== true && !optimal_pool_existed) {
         const non_mongo_optimal_pool_id = await pool_server.get_optimal_non_mongo_pool_id();
+        dbg.log0('non_mongo_optimal_pool_id called:', non_mongo_optimal_pool_id);
         if (!non_mongo_optimal_pool_id) throw new RpcError('SERVICE_UNAVAILABLE', 'Not allowed to create new buckets on internal pool');
         optimal_pool_existed = true;
     }
@@ -1193,10 +1199,12 @@ function update_bucket_lambda_trigger(req) {
 
 
 async function update_all_buckets_default_pool(req) {
+    dbg.log0('update_all_buckets_default_pool called', req.rpc_params);
     const pool_name = req.rpc_params.pool_name;
     const pool = req.system.pools_by_name[pool_name];
     if (!pool) throw new RpcError('INVALID_POOL_NAME');
     const internal_pool = pool_server.get_internal_mongo_pool(pool.system);
+    dbg.log0('update_all_buckets_default_pool equal', internal_pool, pool);
     if (String(pool._id) === String(internal_pool._id)) return;
     const buckets_with_internal_pool = _.filter(req.system.buckets_by_name, bucket =>
         is_using_internal_storage(bucket, internal_pool));
